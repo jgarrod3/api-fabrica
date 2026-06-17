@@ -16,7 +16,7 @@ let estadoFabrica = {
     prensa: {
         estado: "TRABAJANDO",
         ciclos: 24,
-        error: false
+        error: true
     },
     generador: {
         estado: "NORMAL",
