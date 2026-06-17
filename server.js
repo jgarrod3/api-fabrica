@@ -7,7 +7,7 @@ app.use(express.json());
 // Estado inicial de la fábrica (puedes modificarlo para probar)
 let estadoFabrica = {
     modoFabrica: "AUTOMATICO",
-    alarma: false,
+    alarma: true,
     nivelEnergia: 20,
     puerta: {
         estado: "CERRADA",
