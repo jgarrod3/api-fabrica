@@ -8,7 +8,7 @@ app.use(express.json());
 let estadoFabrica = {
     modoFabrica: "AUTOMATICO",
     alarma: false,
-    nivelEnergia: 20,
+    nivelEnergia: 30,
     puerta: {
         estado: "CERRADA",
         ultimoAcceso: "RFID"
