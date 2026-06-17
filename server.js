@@ -14,7 +14,7 @@ let estadoFabrica = {
         ultimoAcceso: "RFID"
     },
     prensa: {
-        estado: "TRABAJANDO",
+        estado: "PARADA",
         ciclos: 24,
         error: false
     },
