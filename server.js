@@ -19,7 +19,7 @@ let estadoFabrica = {
         error: false
     },
     generador: {
-        estado: "NORMAL",
+        estado: "CRITICO",
         consumo: 35
     }
 };
