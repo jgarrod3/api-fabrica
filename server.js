@@ -5,7 +5,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // Panel de control web
+// Panel de control web — sirve index.html en la raíz
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ─────────────────────────────────────────────
 // Estado inicial de la fábrica
@@ -111,7 +114,6 @@ app.put('/alarma', (req, res) => {
 
 // ─────────────────────────────────────────────
 // GET /health   → salud del servidor (para checks)
-// GET /          → sirve el panel de control (index.html via static)
 // ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
