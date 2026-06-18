@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Twin · Panel de Control</title>
+<style>
+  :root {
+    --navy:   #0d1b2a;
+    --navy2:  #1b3a5c;
+    --steel:  #2e5f8a;
+    --mist:   #e8f2f9;
+    --amber:  #f59e0b;
+    --amber2: #d97706;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --orange: #f97316;
+    --yellow: #eab308;
+    --slate:  #94a3b8;
+    --dgray:  #334155;
+    --bg:     #0a1628;
+    --card:   #0f2235;
+    --border: #1e3a5c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    border-bottom: 2px solid var(--amber);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .logo-tag {
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .api-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--slate);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--slate);
+    flex-shrink: 0;
+  }
+  .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.red    { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+  .dot.amber  { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot.pulse  { animation: pulse 1.2s infinite; }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  /* ── MAIN GRID ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 1.2rem;
+  }
+
+  /* ── ALARMA BANNER ── */
+  .alarma-banner {
+    grid-column: 1 / -1;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .alarma-banner.active {
+    border-color: var(--red);
+    background: rgba(239,68,68,0.08);
+    animation: alarm-pulse 1s infinite;
+  }
+  @keyframes alarm-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    50%      { box-shadow: 0 0 20px 4px rgba(239,68,68,0.3); }
+  }
+  .alarma-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .alarma-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .alarma-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .alarma-sub {
+    font-size: 0.75rem;
+    color: var(--slate);
+    margin-top: 2px;
+    font-family: 'Courier New', monospace;
+  }
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .toggle-label {
+    font-size: 0.8rem;
+    color: var(--slate);
+    font-family: 'Courier New', monospace;
+  }
+  .toggle {
+    position: relative;
+    width: 56px;
+    height: 28px;
+    cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--dgray);
+    border-radius: 14px;
+    transition: background 0.25s;
+    border: 1px solid var(--border);
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--red); border-color: var(--red); }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(28px); }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-header {
+    background: var(--navy);
+    padding: 0.75rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .card-icon { font-size: 1.1rem; }
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .card-ref {
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: var(--steel);
+  }
+  .card-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ── STATUS CHIP ── */
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .status-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+  }
+  .chip-green    { background: rgba(34,197,94,0.12);  color: var(--green);  border-color: rgba(34,197,94,0.3); }
+  .chip-yellow   { background: rgba(234,179,8,0.12);  color: var(--yellow); border-color: rgba(234,179,8,0.3); }
+  .chip-orange   { background: rgba(249,115,22,0.12); color: var(--orange); border-color: rgba(249,115,22,0.3); }
+  .chip-red      { background: rgba(239,68,68,0.12);  color: var(--red);    border-color: rgba(239,68,68,0.3); }
+  .chip-gray     { background: rgba(148,163,184,0.1); color: var(--slate);  border-color: rgba(148,163,184,0.2); }
+  .chip-blue     { background: rgba(46,95,138,0.2);   color: #7dd3fc;       border-color: rgba(46,95,138,0.4); }
+
+  /* ── DIVIDER ── */
+  hr.card-hr { border: none; border-top: 1px solid var(--border); }
+
+  /* ── BUTTONS ── */
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--slate);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+  }
+  .btn:hover { border-color: var(--steel); color: #e2e8f0; background: rgba(46,95,138,0.15); }
+  .btn.active-green  { background: rgba(34,197,94,0.15);  border-color: var(--green);  color: var(--green); }
+  .btn.active-yellow { background: rgba(234,179,8,0.15);  border-color: var(--yellow); color: var(--yellow); }
+  .btn.active-orange { background: rgba(249,115,22,0.15); border-color: var(--orange); color: var(--orange); }
+  .btn.active-red    { background: rgba(239,68,68,0.15);  border-color: var(--red);    color: var(--red); }
+  .btn.active-gray   { background: rgba(148,163,184,0.1); border-color: var(--slate);  color: var(--slate); }
+  .btn.active-blue   { background: rgba(46,95,138,0.2);   border-color: #7dd3fc;       color: #7dd3fc; }
+
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── SLIDER ── */
+  .slider-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .slider-top  { display: flex; justify-content: space-between; align-items: baseline; }
+  .slider-val  {
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
+  }
+  .slider-val span { font-size: 0.8rem; color: var(--slate); }
+  input[type=range] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px rgba(245,158,11,0.5);
+    cursor: pointer;
+  }
+  .slider-track-fill { position: relative; }
+
+  /* ── STAT MINI ── */
+  .stat-row { display: flex; gap: 0.8rem; }
+  .stat-mini {
+    flex: 1;
+    background: rgba(14,32,53,0.6);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+  }
+  .stat-mini-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .stat-mini-val {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+
+  /* ── INFO PANEL (bottom) ── */
+  .info-panel {
+    grid-column: 1 / -1;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .info-item-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: var(--steel);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .info-item-val {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #e2e8f0;
+  }
+  .info-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+  }
+  .last-update {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: var(--slate);
+  }
+
+  /* ── ENERGY BAR ── */
+  .energy-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .energy-bar-label { display: flex; justify-content: space-between; }
+  .energy-bar-bg {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .energy-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s, background 0.5s;
+  }
+
+  /* ── PUERTA ── */
+  .puerta-card { grid-column: 1 / -1; }
+  .puerta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.2rem;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--navy);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 999;
+    max-width: 300px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr 1fr; }
+    .puerta-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    main { grid-template-columns: 1fr; padding: 1rem; }
+    header { padding: 0 1rem; }
+    header h1 { font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<header>
+  <div class="header-left">
+    <div class="logo-tag">// DIGITAL TWIN</div>
+    <h1>Fábrica Inteligente · Panel de Control</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.8rem;">
+    <div class="api-badge" id="api-status-badge">
+      <div class="dot pulse" id="api-dot"></div>
+      <span id="api-status-text">Conectando...</span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════ MAIN ════════ -->
+<main>
+
+  <!-- ── ALARMA BANNER ── -->
+  <div class="alarma-banner" id="alarma-banner">
+    <div class="alarma-info">
+      <div class="alarma-icon" id="alarma-icon">🔔</div>
+      <div>
+        <div class="alarma-title" id="alarma-title">Sistema Normal</div>
+        <div class="alarma-sub" id="alarma-sub">Alarma desactivada · Acceso permitido</div>
+      </div>
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label" id="alarma-toggle-label">ALARMA OFF</span>
+      <label class="toggle">
+        <input type="checkbox" id="alarma-toggle" onchange="toggleAlarma(this)">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+  </div>
+
+  <!-- ════════ PRENSA ════════ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-wrap">
+        <span class="card-icon">⚙️</span>
+        <span class="card-title">Prensa Industrial</span>
+      </div>
+      <span class="card-ref">// 01</span>
+    </div>
+    <div class="card-body">
+      <div class="status-row">
+        <span class="status-label">Estado actual</span>
+        <span class="status-chip chip-green" id="prensa-chip">
+          <div class="dot green"></div>
+          <span id="prensa-estado-txt">TRABAJANDO</span>
+        </span>
+      </div>
+      <hr class="card-hr">
+      <div class="stat-row">
+        <div class="stat-mini">
+          <div class="stat-mini-label">Ciclos</div>
+          <div class="stat-mini-val" id="prensa-ciclos">—</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-label">Error</div>
+          <div class="stat-mini-val" id="prensa-error-val" style="color:var(--green)">NO</div>
+        </div>
+      </div>
+      <hr class="card-hr">
+      <span class="status-label">Cambiar estado</span>
+      <div class="btn-group" id="prensa-btns">
+        <button class="btn" data-estado="TRABAJANDO" data-color="green"   onclick="setPrensa(this)">TRABAJANDO</button>
+        <button class="btn" data-estado="PARADA"     data-color="yellow"  onclick="setPrensa(this)">PARADA</button>
+        <button class="btn" data-estado="MANTENIMIENTO" data-color="orange" onclick="setPrensa(this)">MANTENIM.</button>
+        <button class="btn" data-estado="ERROR"      data-color="red"     onclick="setPrensa(this)">ERROR</button>
+        <button class="btn" data-estado="APAGADA"    data-color="gray"    onclick="setPrensa(this)">APAGADA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ GENERADOR ════════ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-wrap">
+        <span class="card-icon">⚡</span>
+        <span class="card-title">Generador Eléctrico</span>
+      </div>
+      <span class="card-ref">// 02</span>
+    </div>
+    <div class="card-body">
+      <div class="status-row">
+        <span class="status-label">Estado actual</span>
+        <span class="status-chip chip-green" id="gen-chip">
+          <div class="dot green"></div>
+          <span id="gen-estado-txt">NORMAL</span>
+        </span>
+      </div>
+      <div class="energy-bar-wrap">
+        <div class="energy-bar-label">
+          <span class="status-label">Nivel de energía</span>
+          <span class="status-label" id="gen-energia-pct" style="color:var(--amber)">72%</span>
+        </div>
+        <div class="energy-bar-bg">
+          <div class="energy-bar-fill" id="gen-energy-bar" style="width:72%;background:var(--green)"></div>
+        </div>
+      </div>
+      <hr class="card-hr">
+      <div class="slider-wrap">
+        <div class="slider-top">
+          <span class="status-label">Ajustar energía manualmente</span>
+          <div class="slider-val" id="slider-val-display">72<span>%</span></div>
+        </div>
+        <input type="range" id="energia-slider" min="0" max="100" value="72"
+          oninput="onSliderInput(this)" onchange="setEnergia(this)">
+      </div>
+      <hr class="card-hr">
+      <span class="status-label">Cambiar estado</span>
+      <div class="btn-group" id="gen-btns">
+        <button class="btn active-green" data-estado="NORMAL"       data-color="green"  data-energia="72"  onclick="setGenerador(this)">NORMAL</button>
+        <button class="btn"              data-estado="BAJO_CONSUMO"  data-color="yellow" data-energia="38"  onclick="setGenerador(this)">BAJO</button>
+        <button class="btn"              data-estado="CRITICO"       data-color="red"    data-energia="15"  onclick="setGenerador(this)">CRITICO</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat-mini">
+          <div class="stat-mini-label">Consumo</div>
+          <div class="stat-mini-val" id="gen-consumo">—<span style="font-size:0.7rem;color:var(--slate)"> kW</span></div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-label">Modo</div>
+          <div class="stat-mini-val" id="gen-modo" style="font-size:0.75rem">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ PUERTA + INFO ════════ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-wrap">
+        <span class="card-icon">🚪</span>
+        <span class="card-title">Puerta de Acceso</span>
+      </div>
+      <span class="card-ref">// 03</span>
+    </div>
+    <div class="card-body">
+      <div class="status-row">
+        <span class="status-label">Estado actual</span>
+        <span class="status-chip chip-green" id="puerta-chip">
+          <div class="dot green"></div>
+          <span id="puerta-estado-txt">CERRADA</span>
+        </span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-mini">
+          <div class="stat-mini-label">Último acceso</div>
+          <div class="stat-mini-val" id="puerta-acceso" style="font-size:0.8rem">—</div>
+        </div>
+      </div>
+      <hr class="card-hr">
+      <span class="status-label" style="font-size:0.65rem;color:var(--steel)">
+        ⓘ La puerta se controla desde Unity (panel físico + trigger).<br>
+        Aquí se muestra su estado en tiempo real.
+      </span>
+      <hr class="card-hr">
+      <span class="status-label">Modo fábrica</span>
+      <div class="btn-group" id="modo-btns">
+        <button class="btn" data-modo="AUTOMATICO" data-color="blue"   onclick="setModo(this)">AUTO</button>
+        <button class="btn" data-modo="MANUAL"     data-color="yellow" onclick="setModo(this)">MANUAL</button>
+        <button class="btn" data-modo="EMERGENCIA" data-color="red"    onclick="setModo(this)">EMERGENCIA</button>
+      </div>
+      <div class="stat-mini" style="margin-top:0">
+        <div class="stat-mini-label">Modo actual</div>
+        <div class="stat-mini-val" id="modo-val" style="font-size:0.8rem;color:var(--amber)">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INFO BAR ── -->
+  <div class="info-panel">
+    <div class="info-item">
+      <span class="info-item-label">Endpoint API</span>
+      <span class="info-item-val" id="api-url-display">—</span>
+    </div>
+    <div class="info-divider"></div>
+    <div class="info-item">
+      <span class="info-item-label">Última actualización</span>
+      <span class="info-item-val last-update" id="last-update">—</span>
+    </div>
+    <div class="info-divider"></div>
+    <div class="info-item">
+      <span class="info-item-label">Modo fábrica</span>
+      <span class="info-item-val" id="modo-fab-bar">—</span>
+    </div>
+    <div class="info-divider"></div>
+    <div class="info-item">
+      <span class="info-item-label">Energía global</span>
+      <span class="info-item-val" id="energia-bar-val" style="color:var(--amber)">—</span>
+    </div>
+    <div class="info-divider"></div>
+    <div class="info-item">
+      <span class="info-item-label">Ciclos totales</span>
+      <span class="info-item-val" id="ciclos-bar">—</span>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIGURACIÓN: detecta si estamos en localhost
+// o en Render, y apunta a la API correcta
+// ─────────────────────────────────────────────
+const API = (() => {
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return origin;
+  // En producción (Render), el panel está en el mismo servidor
+  return origin;
+})();
+
+document.getElementById('api-url-display').textContent = API + '/fabrica';
+
+// ─────────────────────────────────────────────
+// ESTADO LOCAL (cache del último GET)
+// ─────────────────────────────────────────────
+let estado = null;
+let pendingRequest = false;
+let pollTimer = null;
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, 2800);
+}
+
+// ─────────────────────────────────────────────
+// COLOR/CHIP HELPERS
+// ─────────────────────────────────────────────
+const CHIP_MAP = {
+  TRABAJANDO: ['chip-green',  'green'],
+  PARADA:     ['chip-yellow', 'amber'],
+  MANTENIMIENTO: ['chip-orange','orange'],
+  ERROR:      ['chip-red',    'red'],
+  APAGADA:    ['chip-gray',   null],
+  NORMAL:     ['chip-green',  'green'],
+  BAJO_CONSUMO:['chip-yellow','amber'],
+  CRITICO:    ['chip-red',    'red'],
+  ABIERTA:    ['chip-green',  'green'],
+  CERRADA:    ['chip-blue',   null],
+  BLOQUEADA:  ['chip-red',    'red'],
+  ACCESO_DENEGADO:['chip-red','red'],
+  AUTOMATICO: ['chip-blue',   null],
+  MANUAL:     ['chip-yellow', 'amber'],
+  EMERGENCIA: ['chip-red',    'red'],
+};
+const DOT_MAP = { green:'green', amber:'amber', red:'red', orange:'amber' };
+
+function setChip(chipEl, dotEl, txtEl, estado) {
+  const [chipClass, dotColor] = CHIP_MAP[estado] || ['chip-gray', null];
+  chipEl.className = 'status-chip ' + chipClass;
+  dotEl.className  = 'dot' + (dotColor ? ' ' + dotColor : '');
+  txtEl.textContent = estado.replace('_', ' ');
+}
+
+function setActiveBtn(groupEl, activeEstado, colorKey) {
+  groupEl.querySelectorAll('.btn').forEach(b => {
+    const isActive = b.dataset.estado === activeEstado || b.dataset.modo === activeEstado;
+    b.className = 'btn' + (isActive ? ' active-' + b.dataset.color : '');
+  });
+}
+
+// ─────────────────────────────────────────────
+// UPDATE UI FROM STATE
+// ─────────────────────────────────────────────
+function renderUI(s) {
+  if (!s) return;
+  estado = s;
+
+  // Prensa
+  const prensaChip = document.getElementById('prensa-chip');
+  setChip(prensaChip, prensaChip.querySelector('.dot'),
+          document.getElementById('prensa-estado-txt'), s.prensa.estado);
+  document.getElementById('prensa-ciclos').textContent = s.prensa.ciclos;
+  const errVal = document.getElementById('prensa-error-val');
+  errVal.textContent = s.prensa.error ? 'SÍ' : 'NO';
+  errVal.style.color = s.prensa.error ? 'var(--red)' : 'var(--green)';
+  setActiveBtn(document.getElementById('prensa-btns'), s.prensa.estado);
+
+  // Generador
+  const genChip = document.getElementById('gen-chip');
+  setChip(genChip, genChip.querySelector('.dot'),
+          document.getElementById('gen-estado-txt'), s.generador.estado);
+  const energia = s.nivelEnergia ?? 0;
+  document.getElementById('gen-energia-pct').textContent = energia + '%';
+  document.getElementById('slider-val-display').innerHTML = energia + '<span>%</span>';
+  document.getElementById('energia-slider').value = energia;
+  const bar = document.getElementById('gen-energy-bar');
+  bar.style.width = energia + '%';
+  bar.style.background = energia > 50 ? 'var(--green)' : energia > 25 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('gen-consumo').innerHTML =
+    s.generador.consumo + '<span style="font-size:0.7rem;color:var(--slate)"> kW</span>';
+  document.getElementById('gen-modo').textContent = s.modoFabrica;
+  setActiveBtn(document.getElementById('gen-btns'), s.generador.estado);
+
+  // Puerta
+  const puertaChip = document.getElementById('puerta-chip');
+  setChip(puertaChip, puertaChip.querySelector('.dot'),
+          document.getElementById('puerta-estado-txt'), s.puerta.estado);
+  document.getElementById('puerta-acceso').textContent = s.puerta.ultimoAcceso || '—';
+
+  // Modo
+  document.getElementById('modo-val').textContent = s.modoFabrica;
+  document.getElementById('modo-fab-bar').textContent = s.modoFabrica;
+  setActiveBtn(document.getElementById('modo-btns'), s.modoFabrica);
+
+  // Alarma
+  const alarmaOn = s.alarma === true;
+  const banner = document.getElementById('alarma-banner');
+  banner.classList.toggle('active', alarmaOn);
+  document.getElementById('alarma-icon').textContent = alarmaOn ? '🚨' : '🔔';
+  document.getElementById('alarma-title').textContent = alarmaOn ? '⚠ ALARMA ACTIVA' : 'Sistema Normal';
+  document.getElementById('alarma-sub').textContent = alarmaOn
+    ? 'Alarma activa · Puerta bloqueada · Acceso denegado'
+    : 'Alarma desactivada · Acceso permitido';
+  document.getElementById('alarma-toggle').checked = alarmaOn;
+  document.getElementById('alarma-toggle-label').textContent = alarmaOn ? 'ALARMA ON' : 'ALARMA OFF';
+
+  // Info bar
+  document.getElementById('energia-bar-val').textContent = energia + '%';
+  document.getElementById('ciclos-bar').textContent = s.prensa.ciclos;
+  document.getElementById('last-update').textContent = new Date().toLocaleTimeString('es-ES');
+}
+
+// ─────────────────────────────────────────────
+// API CALLS
+// ─────────────────────────────────────────────
+async function apiFetch(method, endpoint, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + endpoint, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function poll() {
+  if (pendingRequest) return;
+  pendingRequest = true;
+  try {
+    const data = await apiFetch('GET', '/fabrica');
+    renderUI(data);
+    // API badge
+    document.getElementById('api-dot').className = 'dot green';
+    document.getElementById('api-status-text').textContent = 'API Conectada';
+  } catch (e) {
+    document.getElementById('api-dot').className = 'dot red pulse';
+    document.getElementById('api-status-text').textContent = 'Sin conexión';
+  } finally {
+    pendingRequest = false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// CONTROLS
+// ─────────────────────────────────────────────
+async function setPrensa(btn) {
+  const est = btn.dataset.estado;
+  try {
+    const body = { estado: est };
+    if (est === 'ERROR') body.error = true;
+    else body.error = false;
+    await apiFetch('PUT', '/prensa', body);
+    toast('Prensa → ' + est);
+    poll();
+  } catch (e) { toast('Error al actualizar prensa', true); }
+}
+
+async function setGenerador(btn) {
+  const est = btn.dataset.estado;
+  try {
+    await apiFetch('PUT', '/generador', { estado: est });
+    toast('Generador → ' + est.replace('_', ' '));
+    poll();
+  } catch (e) { toast('Error al actualizar generador', true); }
+}
+
+async function setEnergia(input) {
+  const val = parseInt(input.value);
+  // Determina estado automáticamente
+  const est = val > 50 ? 'NORMAL' : val > 25 ? 'BAJO_CONSUMO' : 'CRITICO';
+  try {
+    await apiFetch('PUT', '/generador', { estado: est });
+    await apiFetch('PUT', '/fabrica',   { nivelEnergia: val });
+    toast('Energía ajustada a ' + val + '%');
+    poll();
+  } catch (e) { toast('Error al ajustar energía', true); }
+}
+
+function onSliderInput(input) {
+  document.getElementById('slider-val-display').innerHTML =
+    input.value + '<span>%</span>';
+}
+
+async function toggleAlarma(input) {
+  try {
+    await apiFetch('PUT', '/alarma', { activa: input.checked });
+    toast(input.checked ? '🚨 Alarma ACTIVADA' : '✅ Alarma desactivada');
+    poll();
+  } catch (e) {
+    toast('Error al cambiar alarma', true);
+    input.checked = !input.checked; // revert
+  }
+}
+
+async function setModo(btn) {
+  const modo = btn.dataset.modo;
+  try {
+    await apiFetch('PUT', '/fabrica', { modoFabrica: modo });
+    toast('Modo fábrica → ' + modo);
+    poll();
+  } catch (e) { toast('Error al cambiar modo', true); }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+poll();
+setInterval(poll, 3000);
+</script>
+</body>
+</html>
