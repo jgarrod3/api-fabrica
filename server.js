@@ -119,6 +119,15 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
 });
 
+// ─────────────────────────────────────────────
+// Auto-incremento de ciclos mientras la prensa trabaja
+// ─────────────────────────────────────────────
+setInterval(() => {
+  if (estadoFabrica.prensa.estado === 'TRABAJANDO' && !estadoFabrica.prensa.error) {
+    estadoFabrica.prensa.ciclos++;
+  }
+}, 5000); // +1 ciclo cada 5 segundos
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`API Fabrica corriendo en puerto ${PORT}`);
